@@ -1,0 +1,19 @@
+Package: XgeneR
+Type: Package
+Title: XgeneR: Modeling and Visualizing Gene Regulatory Differences Between Homozygous Strains
+Version: 0.1.0
+Author: Maria T. Carilli, Ingileif B. Hallgrímsdóttir, Lior S. Pachter
+Maintainer: Maria T. Carilli <mcarilli@caltech.edu>
+Description: Tools for testing cis/trans regulatory differences between homozygous crosses using edgeR GLMs. Custom fitting and visualization functions. 
+Depends: R (>= 4.3.1)
+Imports:
+    ggplot2,
+    gridExtra,
+    patchwork,
+    edgeR,
+    methods
+License: BSD-2-Clause
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.3
