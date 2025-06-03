@@ -62,7 +62,7 @@ plotPvalHistograms <- function(fitObject, combo) {
 #' @import ggplot2
 #' @import gridExtra
 getAssignmentsAndPlot <- function(fitObject, combo, plot = TRUE, 
-                                  cell_size = 10000, 
+                                  cell_size = 10000, alpha = 0.05,
                                   interaction_designator = "*") {
   
   weight_names <- colnames(fitObject@design_matrix)
@@ -132,10 +132,10 @@ getAssignmentsAndPlot <- function(fitObject, combo, plot = TRUE,
   H <- df$Hyblog2FC
   delta <- P - H
   
-  cis_index <- df$fdr_cis < 0.05 & df$fdr_trans > 0.05
-  trans_index <- df$fdr_cis > 0.05 & df$fdr_trans < 0.05
-  cis_plus_trans_index <- df$fdr_cis < 0.05 & df$fdr_trans < 0.05 & ((delta > 0 & H > 0) | (delta < 0 & H < 0))
-  cis_x_trans_index <- df$fdr_cis < 0.05 & df$fdr_trans < 0.05 & ((delta <= 0 & H >= 0) | (delta >= 0 & H <= 0))
+  cis_index <- df$fdr_cis < alpha & df$fdr_trans > alpha
+  trans_index <- df$fdr_cis > alpha & df$fdr_trans < alpha
+  cis_plus_trans_index <- df$fdr_cis < alpha & df$fdr_trans < alpha & ((delta > 0 & H > 0) | (delta < 0 & H < 0))
+  cis_x_trans_index <- df$fdr_cis < alpha & df$fdr_trans < alpha & ((delta <= 0 & H >= 0) | (delta >= 0 & H <= 0))
   
   colors <- rep("lightgray", nrow(df))
   colors[cis_index] <- "orangered"
