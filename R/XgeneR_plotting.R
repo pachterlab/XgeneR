@@ -21,25 +21,26 @@ plotPvalHistograms <- function(fitObject, combo) {
   fdr_trans <- fitObject@BH_FDRs[[trans_label]]
   
   # Plot objects
-  p1 <- ggplot2::ggplot(data.frame(pval = raw_cis), aes(x = pval)) +
-    geom_histogram(fill = "steelblue", bins = 30) +
-    ggtitle("Raw P Values") +
-    xlab(cis_label) + ylab("Count")
+    p1 <- ggplot2::ggplot(data.frame(pval = raw_cis), ggplot2::aes(x = pval)) +
+      ggplot2::geom_histogram(fill = "steelblue", bins = 30) +
+      ggplot2::ggtitle("Raw P Values") +
+      ggplot2::xlab(cis_label) + ggplot2::ylab("Count")
 
-  p2 <- ggplot2::ggplot(data.frame(pval = raw_trans), aes(x = pval)) +
-    geom_histogram(fill = "steelblue", bins = 30) +
-    ggtitle("") +
-    xlab(trans_label) + ylab("Count")
+    p2 <- ggplot2::ggplot(data.frame(pval = raw_trans), ggplot2::aes(x = pval)) +
+      ggplot2::geom_histogram(fill = "steelblue", bins = 30) +
+      ggplot2::ggtitle("") +
+      ggplot2::xlab(trans_label) + ggplot2::ylab("Count")
 
-  p3 <- ggplot2::ggplot(data.frame(fdr = fdr_cis), aes(x = fdr)) +
-    geom_histogram(fill = "darkred", bins = 30) +
-    ggtitle("Benjamini-Hochberg corrected FDRs") +
-    xlab(cis_label) + ylab("Count")
+    p3 <- ggplot2::ggplot(data.frame(fdr = fdr_cis), ggplot2::aes(x = fdr)) +
+      ggplot2::geom_histogram(fill = "darkred", bins = 30) +
+      ggplot2::ggtitle("Benjamini-Hochberg corrected FDRs") +
+      ggplot2::xlab(cis_label) + ggplot2::ylab("Count")
 
-  p4 <- ggplot2::ggplot(data.frame(fdr = fdr_trans), aes(x = fdr)) +
-    geom_histogram(fill = "darkred", bins = 30) +
-    ggtitle("") +
-    xlab(trans_label) + ylab("Count")
+    p4 <- ggplot2::ggplot(data.frame(fdr = fdr_trans), ggplot2::aes(x = fdr)) +
+      ggplot2::geom_histogram(fill = "darkred", bins = 30) +
+      ggplot2::ggtitle("") +
+      ggplot2::xlab(trans_label) + ggplot2::ylab("Count")
+
 
   # Arrange in 2x2 layout
   (p1 | p2) / (p3 | p4)
@@ -61,66 +62,87 @@ plotPvalHistograms <- function(fitObject, combo) {
 #' @export
 #' @import ggplot2
 #' @import gridExtra
-getAssignmentsAndPlot <- function(fitObject, combo, plot = TRUE, 
+getAssignmentsAndPlot <- function(fitObject, combo = NULL, plot = TRUE, 
                                   cell_size = 10000, alpha = 0.05,
                                   interaction_designator = "*") {
   
-  weight_names <- colnames(fitObject@design_matrix)
-  fdrs_no_cis <- fitObject@BH_FDRs[[paste0(combo, " null: no cis")]]
-  fdrs_no_trans <- fitObject@BH_FDRs[[paste0(combo, " null: no trans")]]
-  
-  # Construct unique categories
-  unique_categories <- lapply(fitObject@fields_to_test, function(f) {
-    unique(fitObject@metadata[[f]])
-  })
-  names(unique_categories) <- fitObject@fields_to_test
-  
-  all_fields <- unlist(unique_categories)
-  combo_split <- strsplit(combo, interaction_designator)[[1]]
-  bad_fields <- all_fields[!all_fields %in% combo_split]
-  
-  combo_X <- matrix(0, nrow = 4, ncol = length(weight_names))
-  
-  for (i in seq_along(weight_names)) {
-    weight <- weight_names[i]
-    keep <- !any(sapply(bad_fields, function(b) grepl(b, weight)))
-    cis <- keep && grepl("cis", weight)
-    trans1 <- keep && grepl("trans1", weight)
-    trans2 <- keep && grepl("trans2", weight)
+  weight_names <- colnames(fitObject@design_matrix_full)
     
-    if (cis) {
-      combo_X[2, i] <- 1
-      combo_X[4, i] <- 1
-    }
-    if (trans1) {
-      combo_X[1, i] <- 1
-      combo_X[3, i] <- 1
-      combo_X[4, i] <- 1
-    }
-    if (trans2) {
-      combo_X[2, i] <- 1
-      combo_X[3, i] <- 1
-      combo_X[4, i] <- 1
-    }
-    if (keep && !cis && !trans1 && !trans2) {
-      combo_X[, i] <- 1
-    }
+  if (!is.null(combo)) {
+      fdrs_no_cis <- fitObject@BH_FDRs[[paste0(combo, " null: no cis")]]
+      fdrs_no_trans <- fitObject@BH_FDRs[[paste0(combo, " null: no trans")]]
+      # Construct unique categories
+      unique_categories <- lapply(fitObject@fields_to_test, function(f) {
+        unique(fitObject@metadata[[f]])
+      })
+      names(unique_categories) <- fitObject@fields_to_test
+
+      all_fields <- unlist(unique_categories)
+      combo_split <- strsplit(combo, interaction_designator)[[1]]
+      bad_fields <- all_fields[!all_fields %in% combo_split]
+
+      combo_X <- matrix(0, nrow = 4, ncol = length(weight_names))
+
+      for (i in seq_along(weight_names)) {
+        weight <- weight_names[i]
+        keep <- !any(sapply(bad_fields, function(b) grepl(b, weight)))
+        cis <- keep && grepl("cis", weight)
+        trans1 <- keep && grepl("trans1", weight)
+        trans2 <- keep && grepl("trans2", weight)
+
+        if (cis) {
+          combo_X[2, i] <- 1
+          combo_X[4, i] <- 1
+        }
+        if (trans1) {
+          combo_X[1, i] <- 1
+          combo_X[3, i] <- 1
+          combo_X[4, i] <- 1
+        }
+        if (trans2) {
+          combo_X[2, i] <- 1
+          combo_X[3, i] <- 1
+          combo_X[4, i] <- 1
+        }
+        if (keep && !cis && !trans1 && !trans2) {
+          combo_X[, i] <- 1
+        }
+      }
+                        
+  } else {
+      fdrs_no_cis <- fitObject@BH_FDRs[["null: no cis"]]
+      fdrs_no_trans <- fitObject@BH_FDRs[["null: no trans"]]
+      
+      combo_X <- matrix(0, nrow = 4, ncol = length(weight_names))
+      # intercept
+      combo_X[,1] <- 1
+      # cis
+      combo_X[2, 2] <- 1
+      combo_X[4, 2] <- 1
+      # trans1
+      combo_X[1, 3] <- 1
+      combo_X[3, 3] <- 1
+      combo_X[4, 3] <- 1
+      # trans2
+      combo_X[2, 3] <- 1
+      combo_X[3, 3] <- 1
+      combo_X[4, 3] <- 1
   }
-  
-  num_test <- nrow(fitObject@coefficients)
+                        
+  num_test <- nrow(fitObject@weights)
   pred_counts <- matrix(NA, nrow = num_test, ncol = 4)
   for (i in 1:num_test) {
-    pred_log <- fitObject@coefficients[i, ] %*% t(combo_X) + log(cell_size)
+    pred_log <- fitObject@weights[i, ] %*% t(combo_X) + log(cell_size)
     pred_counts[i, ] <- exp(pred_log)
   }
   
   P1 <- pred_counts[, 1]
   P2 <- pred_counts[, 2]
   H1 <- pred_counts[, 3]
-  H2 <- pred_counts[, 4]
+  H2 <- pred_counts[, 4]                        
   
   df <- data.frame(
-    gene = fitObject@genes,
+    gene = rownames(fitObject@counts),
     P1 = P1, P2 = P2, H1 = H1, H2 = H2,
     Parlog2FC = log2(P1 / P2),
     Hyblog2FC = log2(H1 / H2),
@@ -162,30 +184,47 @@ getAssignmentsAndPlot <- function(fitObject, combo, plot = TRUE,
   df$cis_prop_reordered <- cis_prop_reordered
   
   if (plot) {
-    p1 <- ggplot2::ggplot(df, aes(x = Parlog2FC, y = Hyblog2FC, color = reg_assignment)) +
-      geom_point(size = 0.8, alpha = 0.7) +
-      geom_abline(intercept = 0, slope = 1, color = "orangered") +
-      geom_abline(intercept = 0, slope = 2, color = "skyblue") +
-      geom_abline(intercept = 0, slope = -2, color = "forestgreen") +
-      geom_vline(xintercept = 0) + geom_hline(yintercept = 0, color = "darkblue") +
-      theme_bw() + ggtitle("Parental vs Hybrid Fold Change")
-    
-    p2 <- ggplot2::ggplot(df, aes(x = delta, y = H, color = reg_assignment)) +
-      geom_point(size = 0.8, alpha = 0.7) +
-      geom_vline(xintercept = 0, color = "orangered") +
-      geom_hline(yintercept = 0, color = "darkblue") +
-      geom_abline(intercept = 0, slope = 1, color = "skyblue") +
-      geom_abline(intercept = 0, slope = -1, color = "forestgreen") +
-      theme_bw() + ggtitle("Delta vs Hybrid Fold Change")
-    
-    p3 <- ggplot2::ggplot(df, aes(x = cis_prop_reordered, y = P, color = reg_assignment)) +
-      geom_point(size = 0.8, alpha = 0.7) +
-      geom_vline(xintercept = c(-1, 0, 0.5, 1), color = c("forestgreen", "skyblue", "orangered", "forestgreen")) +
-      geom_hline(yintercept = 0, color = "black") +
-      theme_bw() + ggtitle("Polar Representation of Cis-Trans Balance")
-    
-    grid.arrange(p1, p2, p3, nrow = 3)
-  }
+      p1 <- ggplot2::ggplot(df, ggplot2::aes(x = Parlog2FC, y = Hyblog2FC, color = reg_assignment)) +
+        ggplot2::geom_point(size = 0.8, alpha = 0.7) +
+        ggplot2::geom_abline(intercept = 0, slope = 1, color = "orangered") +
+        ggplot2::geom_abline(intercept = 0, slope = 2, color = "skyblue") +
+        ggplot2::geom_abline(intercept = 0, slope = -2, color = "forestgreen") +
+        ggplot2::geom_vline(xintercept = 0) +
+        ggplot2::geom_hline(yintercept = 0, color = "darkblue") +
+        ggplot2::theme_bw() +
+#         ggplot2::ggtitle("Parental vs Hybrid Fold Change") +
+        ggplot2::ylab(expression(R[H]~"(log"[2]*" hybrid fold change)")) + 
+        ggplot2::xlab(expression(R[P]~"(log"[2]*" parental fold change)")) +
+        ggplot2::scale_color_discrete(name = "Assignments")
+
+      p2 <- ggplot2::ggplot(df, ggplot2::aes(x = delta, y = H, color = reg_assignment)) +
+        ggplot2::geom_point(size = 0.8, alpha = 0.7) +
+        ggplot2::geom_vline(xintercept = 0, color = "orangered") +
+        ggplot2::geom_hline(yintercept = 0, color = "darkblue") +
+        ggplot2::geom_abline(intercept = 0, slope = 1, color = "skyblue") +
+        ggplot2::geom_abline(intercept = 0, slope = -1, color = "forestgreen") +
+        ggplot2::theme_bw() + 
+        ggplot2::xlab(expression(R[P] - R[H])) + 
+        ggplot2::ylab(expression(R[H])) +
+        ggplot2::scale_color_discrete(name = "Assignments")
+#         ggplot2::theme(legend.position = "none")
+#         ggplot2::ggtitle("R vs Hybrid Fold Change")
+
+      p3 <- ggplot2::ggplot(df, ggplot2::aes(x = cis_prop_reordered, y = P, color = reg_assignment)) +
+        ggplot2::geom_point(size = 0.8, alpha = 0.7) +
+        ggplot2::geom_vline(xintercept = c(-1, 0, 0.5, 1), color = c("forestgreen", "skyblue", "orangered", "forestgreen")) +
+        ggplot2::geom_hline(yintercept = 0, color = "black") +
+        ggplot2::theme_bw() + 
+        ggplot2::xlab("Proportion cis") + 
+        ggplot2::ylab(expression(R[H])) +
+        ggplot2::scale_x_continuous(labels = function(x) abs(x)) + 
+        ggplot2::scale_color_discrete(name = "Assignments")
+#         ggplot2::theme(legend.position = "none")
+#         ggplot2::ggtitle("Polar Representation of Cis-Trans Balance")
+
+      p <- gridExtra::grid.arrange(p1, p2, p3, nrow = 3)
+    } else { p<- NULL }
+                       
   
-  return(df)
+  return(list(data = df, plot = p))
 }
