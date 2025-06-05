@@ -303,8 +303,8 @@ get_fdrs <- function(pvals) {
   # BH adjustment formula
   fdr_sorted <- (seq_along(sorted_p) / num_test) * sorted_p
   # Ensure monotonicity of adjusted p-values
-#   fdr_sorted <- cummin(rev(fdr_sorted))
-#   fdr_sorted <- rev(fdr_sorted)
+  fdr_sorted <- cummin(rev(fdr_sorted))
+  fdr_sorted <- rev(fdr_sorted)
   # Put back in original order
   fdr <- numeric(num_test)
   fdr[order_idx] <- fdr_sorted
@@ -347,7 +347,7 @@ setMethod("fit_edgeR", "fitObject", function(object, ...) {
       lrt <- edgeR::glmLRT(fit, contrast = contrast_vector)
       raw_pvals <- lrt$table$PValue
       raw_pval_list[[contrast_name]] <- raw_pvals
-      corrected_fdr_list[[contrast_name]] <- p.adjust(raw_pvals, method = "BH")
+#       corrected_fdr_list[[contrast_name]] <- p.adjust(raw_pvals, method = "BH")  perhaps implement later
       corrected_fdr_list[[contrast_name]] <- get_fdrs(raw_pvals)
     }
   print(i)
