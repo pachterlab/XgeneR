@@ -9,8 +9,7 @@ vignette: >
 ---
 
 ```{r}
-devtools::load_all('../../XgeneR/')
-# library(XgeneR)
+library(XgeneR)
 ```
 
 Load in RNAseq count data and metadata describing the samples. This example uses brown adipose tissue samples from male mice reared in cold conditions from Ballinger et al. (2023). 
@@ -21,8 +20,6 @@ The counts must be a matrix in the format genes by sample, with row names gene n
 count_path <- system.file("extdata", "BATcold_ballinger_counts.csv", package = "XgeneR")
 metadata_path <- system.file("extdata", "BATcold_ballinger_metadata.csv", package = "XgeneR")
 
-metadata_path <- "/home/maria/XgeneR/inst/extdata/BATcold_ballinger_metadata.csv"
-count_path <- "/home/maria/XgeneR/inst/extdata/BATcold_ballinger_counts.csv"
 counts <- read.csv(count_path, row.names = 1)
 counts <- as.matrix(counts)
 metadata <- read.csv(metadata_path, row.names = 1) 
