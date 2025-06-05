@@ -1,0 +1,9 @@
+This repository includes code to run analysis of _cis_ and _trans_ regulatory differences between homozygous strains using RNAseq data from parents of both strains and their hybrid crosses, and to visualize the results. It requires that replicates are available. 
+
+Source code is in `R/`, while example vignettes can be found for single condition or multiple condition regulation in `vignettes/`.  
+
+The preprint "Estimating cis and trans contributions to differences in gene regulation" [Hallgrímsdóttir et al. 2024] describes the theory behind the model, statistical tests, and visualization.  
+
+It can be installed in R:
+
+<code> devtools::install_github("pachterlab/XgeneR") </code>. 

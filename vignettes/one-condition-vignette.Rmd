@@ -9,8 +9,8 @@ vignette: >
 ---
 
 ```{r}
-devtools::load_all('../../XgeneR/')
-# library(XgeneR)
+# devtools::load_all('../../XgeneR/')
+library(XgeneR)
 ```
 
 Load in RNAseq count data and metadata describing the samples. This example uses brown adipose tissue samples from male mice reared in cold conditions from Ballinger et al. (2023). 
@@ -18,9 +18,8 @@ Load in RNAseq count data and metadata describing the samples. This example uses
 The counts must be a matrix in the format genes by sample, with row names gene names and column names sample names. The metadata must include a column with header "Allele" that for every sample in the count columns indicates if the sample is from parent strain 1 (P1), parent strain 2 (P2), allele specific expression in hybrids of parental allele 1 (H1), or allele specific expression in hybrids of parental allele 2 (H2).
 
 ```{r}
-count_path <- "/home/maria/XgeneR/inst/extdata/BATcold_ballinger_counts.csv"
-metadata_path <- "/home/maria/XgeneR/inst/extdata/BATcold_ballinger_metadata.csv"
-
+count_path <- system.file("extdata", "BATcold_ballinger_counts.csv", package = "XgeneR")
+metadata_path <- system.file("extdata", "BATcold_ballinger_metadata.csv", package = "XgeneR")
 
 counts <- read.csv(count_path, row.names = 1)
 counts <- as.matrix(counts)
