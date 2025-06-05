@@ -4,14 +4,19 @@ Title: XgeneR: Modeling and Visualizing Gene Regulatory Differences Between Homo
 Version: 0.1.0
 Author: Maria T. Carilli, Ingileif B. Hallgrímsdóttir, Lior S. Pachter
 Maintainer: Maria T. Carilli <mcarilli@caltech.edu>
-Description: Tools for testing cis/trans regulatory differences between homozygous crosses using edgeR GLMs. Custom fitting and visualization functions. 
-Depends: R (>= 4.3.1)
+Description: Tools for testing cis and trans regulatory differences between homozygous crosses using generalized linear models implemented in edgeR. Contains custom fitting and visualization functions.
 Imports:
+    edgeR,
     ggplot2,
     gridExtra,
     patchwork,
-    edgeR,
     methods
+Suggests:
+    knitr,
+    rmarkdown,
+    tinytex
+Depends: R (>= 4.3.1)
+VignetteBuilder: knitr
 License: BSD-2-Clause
 Encoding: UTF-8
 LazyData: true

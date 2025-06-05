@@ -293,6 +293,23 @@ setMethod("initialize", "fitObject", function(.Object, counts, metadata, fields_
   .Object
 })
 
+                              
+get_fdrs <- function(pvals) {
+  num_test <- length(pvals)
+  # Get order of p-values
+  order_idx <- order(pvals)
+  # Sort p-values
+  sorted_p <- pvals[order_idx]
+  # BH adjustment formula
+  fdr_sorted <- (seq_along(sorted_p) / num_test) * sorted_p
+  # Ensure monotonicity of adjusted p-values
+#   fdr_sorted <- cummin(rev(fdr_sorted))
+#   fdr_sorted <- rev(fdr_sorted)
+  # Put back in original order
+  fdr <- numeric(num_test)
+  fdr[order_idx] <- fdr_sorted
+  return(fdr)
+}
 
 setGeneric("fit_edgeR", function(object, ...) standardGeneric("fit_edgeR"))
 #' @title Fit GLM on parent and hybrid crosses using edgeR.
@@ -309,6 +326,7 @@ setMethod("fit_edgeR", "fitObject", function(object, ...) {
   counts <- object@counts
   design_matrix <- object@design_matrix_full
   contrast_vectors <- object@contrast_vectors
+
   gene_names <- rownames(counts)
 
   raw_pval_list <- list(Genes = gene_names)
@@ -316,19 +334,23 @@ setMethod("fit_edgeR", "fitObject", function(object, ...) {
 
   # Run edgeR pipeline
   y <- edgeR::DGEList(counts = counts)
-  y <- edgeR::calcNormFactors(y)
-  y <- edgeR::estimateDisp(y, design_matrix)
+#   y <- edgeR::calcNormFactors(y)
+  y <- edgeR::normLibSizes(y)
+  y <- edgeR::estimateDisp(y)
   fit <- edgeR::glmFit(y, design_matrix)
 
   # Test various hypotheses
+  i = 0 
   for (contrast_name in names(contrast_vectors)) {
+      i = i+1
       contrast_vector <- contrast_vectors[[contrast_name]]
-
       lrt <- edgeR::glmLRT(fit, contrast = contrast_vector)
       raw_pvals <- lrt$table$PValue
       raw_pval_list[[contrast_name]] <- raw_pvals
       corrected_fdr_list[[contrast_name]] <- p.adjust(raw_pvals, method = "BH")
+      corrected_fdr_list[[contrast_name]] <- get_fdrs(raw_pvals)
     }
+  print(i)
 
   object@raw_pvals <- as.data.frame(raw_pval_list, row.names = gene_names, check.names = FALSE)
   object@BH_FDRs <- as.data.frame(corrected_fdr_list, row.names = gene_names, check.names = FALSE)

@@ -1,0 +1,73 @@
+---
+title: "Introduction to XgeneR for homozygous crosses in a single condition."
+author: "Maria T. Carilli"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to XgeneR for homozygous crosses in a single condition.}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r}
+devtools::load_all('../../XgeneR/')
+# library(XgeneR)
+```
+
+Load in RNAseq count data and metadata describing the samples. This example uses brown adipose tissue samples from male mice reared in cold conditions from Ballinger et al. (2023). 
+
+The counts must be a matrix in the format genes by sample, with row names gene names and column names sample names. The metadata must include a column with header "Allele" that for every sample in the count columns indicates if the sample is from parent strain 1 (P1), parent strain 2 (P2), allele specific expression in hybrids of parental allele 1 (H1), or allele specific expression in hybrids of parental allele 2 (H2).
+
+```{r}
+count_path <- "/home/maria/XgeneR/inst/extdata/BATcold_ballinger_counts.csv"
+metadata_path <- "/home/maria/XgeneR/inst/extdata/BATcold_ballinger_metadata.csv"
+
+
+counts <- read.csv(count_path, row.names = 1)
+counts <- as.matrix(counts)
+metadata <- read.csv(metadata_path, row.names = 1) 
+```
+
+Now, create an XgeneR fitObject, which requires at a minimum counts and metadata. If testing in only a single condition, the `fields_to_test` argument is `NULL` (default). 
+
+```{r}
+# create fitObject
+fit_obj <- new("fitObject",counts = counts, metadata = metadata, fields_to_test = NULL)
+```
+
+Run edgeR to produce raw p-values and Benjamini-Hochberg false discovery rates (corrected by the number of genes per test) for the null hypotheses of "null: no cis" regulation and no trans regulation ("null: no trans"). 
+```{r}
+# run edgeR tests
+fit_obj <- fit_edgeR(fit_obj)
+head(fit_obj@raw_pvals[["null: no cis"]])
+head(fit_obj@raw_pvals[["null: no trans"]])
+head(fit_obj@BH_FDRs[["null: no cis"]])
+head(fit_obj@BH_FDRs[["null: no trans"]])
+```
+
+Create diagnostic plots. 
+
+The following creates a histogram of raw p-values and Benjamini Hochberg corrected FDRs.
+```{r}
+fig_dir <- "./figures"
+if (!dir.exists(fig_dir)) {
+  dir.create(fig_dir, recursive = TRUE)
+}
+png("./figures/pvalue_histogram_one-condition.png", width=400, height = 400)
+pval_plot <- plotPvalHistograms(fit_obj)
+ggplot2::ggsave("./figures/pvalue_histogram_one-condition.png",plot=pval_plot,width=4,height=4)
+```
+
+The following function `getAssignmentsandPlot` returns a data frame with regulatory assignments based on an FDR threshold of `alpha` as well as a plot that produces a visualization of the log2 of parental ratios and hybrid ratios colored by assignment in untransformed and transformed coordinate systems and the proportion cis. `results$df` is a dataframe regulatory assignments for the given `combo`, while `results$plot` is the plot.  
+
+```{r}
+png("./figures/tri_plot_one-condition.png", width=400, height = 1000)
+results <- getAssignmentsAndPlot(fit_obj,alpha=0.05)
+ggplot2::ggsave("./figures/tri_plot_one-condition.png",plot=results$plot,width=4,height=10)
+```
+
+Finally, plot histogram of genes assigned to each category.
+```{r}
+png("./figures/tri_plot.png", width=400, height = 400)
+p <- plotRegulatoryHistogram (results$df,title="Regulatory assignments quantified")
+ggplot2::ggsave("./figures/reg_histogram_one-condition.png",plot=p,width=4,height=4)
+```

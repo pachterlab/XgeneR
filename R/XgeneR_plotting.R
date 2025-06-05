@@ -9,10 +9,15 @@
 #' @export
 #' @import ggplot2
 #' @import patchwork
-plotPvalHistograms <- function(fitObject, combo) {
+plotPvalHistograms <- function(fitObject, combo = NULL) {
   # Construct keys for named list lookup
-  cis_label <- paste0(combo, " null: no cis")
-  trans_label <- paste0(combo, " null: no trans")
+  if (!is.null(combo)) {
+      cis_label <- paste0(combo, " null: no cis")
+      trans_label <- paste0(combo, " null: no trans")} else {
+      cis_label <- "null: no cis"
+      trans_label <- "null: no trans"
+  }
+  
   
   # Extract values
   raw_cis <- fitObject@raw_pvals[[cis_label]]
@@ -115,7 +120,10 @@ getAssignmentsAndPlot <- function(fitObject, combo = NULL, plot = TRUE,
       
       combo_X <- matrix(0, nrow = 4, ncol = length(weight_names))
       # intercept
-      combo_X[,1] <- 1
+      combo_X[1,1] <- 1
+      combo_X[2,1] <- 1
+      combo_X[3,1] <- 1
+      combo_X[4,1] <- 1
       # cis
       combo_X[2, 2] <- 1
       combo_X[4, 2] <- 1
@@ -124,9 +132,9 @@ getAssignmentsAndPlot <- function(fitObject, combo = NULL, plot = TRUE,
       combo_X[3, 3] <- 1
       combo_X[4, 3] <- 1
       # trans2
-      combo_X[2, 3] <- 1
-      combo_X[3, 3] <- 1
-      combo_X[4, 3] <- 1
+      combo_X[2, 4] <- 1
+      combo_X[3, 4] <- 1
+      combo_X[4, 4] <- 1
   }
                         
   num_test <- nrow(fitObject@weights)
@@ -163,7 +171,7 @@ getAssignmentsAndPlot <- function(fitObject, combo = NULL, plot = TRUE,
   colors[cis_index] <- "orangered"
   colors[trans_index] <- "royalblue"
   colors[cis_plus_trans_index] <- "skyblue"
-  colors[cis_x_trans_index] <- "green"
+  colors[cis_x_trans_index] <- "forestgreen"
   df$colors <- colors
   
   reg_assignment <- rep("conserved", nrow(df))
@@ -177,6 +185,7 @@ getAssignmentsAndPlot <- function(fitObject, combo = NULL, plot = TRUE,
   theta_scaled <- (2 / pi) * atan2(H, delta)
   R <- sqrt(delta^2 + H^2)
   cis_prop_reordered <- theta_scaled - 0.5
+  cis_prop_reordered[cis_prop_reordered > 1] = cis_prop_reordered[cis_prop_reordered > 1] - 2.0
   cis_prop_reordered[cis_prop_reordered <= -1] <- cis_prop_reordered[cis_prop_reordered <= -1] + 2.0
   
   df$R <- R
@@ -184,8 +193,8 @@ getAssignmentsAndPlot <- function(fitObject, combo = NULL, plot = TRUE,
   df$cis_prop_reordered <- cis_prop_reordered
   
   if (plot) {
-      p1 <- ggplot2::ggplot(df, ggplot2::aes(x = Parlog2FC, y = Hyblog2FC, color = reg_assignment)) +
-        ggplot2::geom_point(size = 0.8, alpha = 0.7) +
+      p1 <- ggplot2::ggplot(df, ggplot2::aes(x = Parlog2FC, y = Hyblog2FC)) +
+        ggplot2::geom_point(size = 0.8, alpha = 0.7, color = df$colors) +
         ggplot2::geom_abline(intercept = 0, slope = 1, color = "orangered") +
         ggplot2::geom_abline(intercept = 0, slope = 2, color = "skyblue") +
         ggplot2::geom_abline(intercept = 0, slope = -2, color = "forestgreen") +
@@ -197,8 +206,8 @@ getAssignmentsAndPlot <- function(fitObject, combo = NULL, plot = TRUE,
         ggplot2::xlab(expression(R[P]~"(log"[2]*" parental fold change)")) +
         ggplot2::scale_color_discrete(name = "Assignments")
 
-      p2 <- ggplot2::ggplot(df, ggplot2::aes(x = delta, y = H, color = reg_assignment)) +
-        ggplot2::geom_point(size = 0.8, alpha = 0.7) +
+      p2 <- ggplot2::ggplot(df, ggplot2::aes(x = delta, y = H)) +
+        ggplot2::geom_point(size = 0.8, alpha = 0.7, color = df$colors) +
         ggplot2::geom_vline(xintercept = 0, color = "orangered") +
         ggplot2::geom_hline(yintercept = 0, color = "darkblue") +
         ggplot2::geom_abline(intercept = 0, slope = 1, color = "skyblue") +
@@ -210,21 +219,74 @@ getAssignmentsAndPlot <- function(fitObject, combo = NULL, plot = TRUE,
 #         ggplot2::theme(legend.position = "none")
 #         ggplot2::ggtitle("R vs Hybrid Fold Change")
 
-      p3 <- ggplot2::ggplot(df, ggplot2::aes(x = cis_prop_reordered, y = P, color = reg_assignment)) +
-        ggplot2::geom_point(size = 0.8, alpha = 0.7) +
-        ggplot2::geom_vline(xintercept = c(-1, 0, 0.5, 1), color = c("forestgreen", "skyblue", "orangered", "forestgreen")) +
+      p3 <- ggplot2::ggplot(df, ggplot2::aes(x = cis_prop_reordered, y = P)) +
+        ggplot2::geom_point(size = 0.8, alpha = 0.7, color = df$colors) +
+        ggplot2::geom_vline(xintercept = c(-1, -0.5, 0, 0.5, 1), color = c("forestgreen", "darkblue", "skyblue", "orangered", "forestgreen")) +
         ggplot2::geom_hline(yintercept = 0, color = "black") +
         ggplot2::theme_bw() + 
         ggplot2::xlab("Proportion cis") + 
         ggplot2::ylab(expression(R[H])) +
-        ggplot2::scale_x_continuous(labels = function(x) abs(x)) + 
+#         ggplot2::scale_x_continuous(labels = function(x) abs(x)) + 
         ggplot2::scale_color_discrete(name = "Assignments")
 #         ggplot2::theme(legend.position = "none")
 #         ggplot2::ggtitle("Polar Representation of Cis-Trans Balance")
+      
+      if (!is.null(combo)) {
+          title <- grid::textGrob(combo,gp = grid::gpar(fontsize = 16))} else{
+          title <- grid::textGrob("",gp = grid::gpar(fontsize = 16))
+      }
+      
+      plot_panel <- do.call(gridExtra::arrangeGrob, c(list(p1, p2, p3), nrow = 3))
 
-      p <- gridExtra::grid.arrange(p1, p2, p3, nrow = 3)
+      p <- gridExtra::grid.arrange(
+          title,
+          plot_panel,
+          nrow = 2,
+          heights = c(0.08, 1)
+        )
+      
     } else { p<- NULL }
                        
   
-  return(list(data = df, plot = p))
+  return(list(df = df, plot = p))
+}
+                            
+
+#' Plot histogram of reegulatory assignments.
+#'
+#' Creates a histogram-style bar plot showing the number of genes assigned to each regulatory category:
+#' \code{cis}, \code{trans}, \code{cisxtrans}, \code{cis+trans}, and \code{conserved}.
+#'
+#' @param df A data frame containing a column named \code{reg_assignment} with one of the five regulatory assignment values.
+#' @param title A string to use as the plot title. Defaults to \code{"Regulatory Categories Histogram"}.
+#'
+#' @return A \code{ggplot} object representing the histogram.
+#'
+#' @import ggplot2
+#' @export                            
+plotRegulatoryHistogram <- function(df, title = "Regulatory Categories Histogram") {
+    
+  df <- as.data.frame(df)
+  print(unique(df$reg_assignment))
+    
+  # define the order of categories and corresponding colors
+  categories <- c("cis", "trans", "cisxtrans", "cis+trans", "conserved")
+  colors <- c("orangered", "darkblue", "forestgreen", "skyblue", "gray")
+  color_map <- setNames(colors, categories)
+    
+  # coerce the reg_assignment column to a factor with desired order
+  df$reg_assignment <- factor(df$reg_assignment, levels = categories)
+    
+  # Create plot
+  p <- ggplot2::ggplot(df, ggplot2::aes(x = reg_assignment, fill =  reg_assignment)) +
+    ggplot2::geom_bar() +
+    ggplot2::geom_text(stat = "count", ggplot2::aes(label = ..count..), vjust = -0.3, size = 3) +
+    ggplot2::scale_fill_manual(values = color_map) +
+    ggplot2::theme_bw() +
+    ggplot2::xlab("Regulatory assignment") +
+    ggplot2::ylab("Number of genes") +
+    ggplot2::ggtitle(title) +
+    ggplot2::theme(axis.text.x = ggplot2::element_blank())
+
+  return(p)
 }
