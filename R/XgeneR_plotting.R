@@ -196,8 +196,8 @@ getAssignmentsAndPlot <- function(fitObject, combo = NULL, plot = TRUE,
       p1 <- ggplot2::ggplot(df, ggplot2::aes(x = Parlog2FC, y = Hyblog2FC)) +
         ggplot2::geom_point(size = 0.8, alpha = 0.7, color = df$colors) +
         ggplot2::geom_abline(intercept = 0, slope = 1, color = "orangered") +
-        ggplot2::geom_abline(intercept = 0, slope = 2, color = "skyblue") +
-        ggplot2::geom_abline(intercept = 0, slope = -2, color = "forestgreen") +
+        ggplot2::geom_abline(intercept = 0, slope = .5, color = "skyblue") +
+        ggplot2::geom_abline(intercept = 0, slope = -5, color = "forestgreen") +
         ggplot2::geom_vline(xintercept = 0) +
         ggplot2::geom_hline(yintercept = 0, color = "darkblue") +
         ggplot2::theme_bw() +
@@ -210,7 +210,7 @@ getAssignmentsAndPlot <- function(fitObject, combo = NULL, plot = TRUE,
         ggplot2::geom_point(size = 0.8, alpha = 0.7, color = df$colors) +
         ggplot2::geom_vline(xintercept = 0, color = "orangered") +
         ggplot2::geom_hline(yintercept = 0, color = "darkblue") +
-        ggplot2::geom_abline(intercept = 0, slope = 1, color = "skyblue") +
+      ggplot2::geom_abline(intercept = 0, slope = 1, color = "skyblue") +
         ggplot2::geom_abline(intercept = 0, slope = -1, color = "forestgreen") +
         ggplot2::theme_bw() + 
         ggplot2::xlab(expression(R[P] - R[H])) + 
@@ -218,15 +218,21 @@ getAssignmentsAndPlot <- function(fitObject, combo = NULL, plot = TRUE,
         ggplot2::scale_color_discrete(name = "Assignments")
 #         ggplot2::theme(legend.position = "none")
 #         ggplot2::ggtitle("R vs Hybrid Fold Change")
-
+      
+      x_ <- ggplot_build(p2)$layout$panel_params[[1]]$x.range
+      p2 <- p2 + ggplot2::plot( color = "skyblue") +
+    
+      custom_breaks <- c(-1.0, -0.5, 0.0, 0.5, 1.0)
+      custom_labels <- c(0.05, 0.0, 0.5, 1.0, 0.5)
+      
       p3 <- ggplot2::ggplot(df, ggplot2::aes(x = cis_prop_reordered, y = P)) +
         ggplot2::geom_point(size = 0.8, alpha = 0.7, color = df$colors) +
         ggplot2::geom_vline(xintercept = c(-1, -0.5, 0, 0.5, 1), color = c("forestgreen", "darkblue", "skyblue", "orangered", "forestgreen")) +
         ggplot2::geom_hline(yintercept = 0, color = "black") +
         ggplot2::theme_bw() + 
         ggplot2::xlab("Proportion cis") + 
-        ggplot2::ylab(expression(R[H])) +
-#         ggplot2::scale_x_continuous(labels = function(x) abs(x)) + 
+        ggplot2::ylab(expression(R[P])) +
+        scale_x_continuous(breaks = custom_breaks, labels = custom_labels) +
         ggplot2::scale_color_discrete(name = "Assignments")
 #         ggplot2::theme(legend.position = "none")
 #         ggplot2::ggtitle("Polar Representation of Cis-Trans Balance")
