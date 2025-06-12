@@ -69,4 +69,3 @@ png("./figures/tri_plot.png", width=400, height = 400)
 p <- plotRegulatoryHistogram (results$df,title="Liver*Warm")
 ggplot2::ggsave("./figures/reg_histogram_multiple-conditions.png",plot=p,width=4,height=4)
 ```
-```
