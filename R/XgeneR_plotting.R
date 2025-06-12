@@ -218,9 +218,7 @@ getAssignmentsAndPlot <- function(fitObject, combo = NULL, plot = TRUE,
         ggplot2::scale_color_discrete(name = "Assignments")
 #         ggplot2::theme(legend.position = "none")
 #         ggplot2::ggtitle("R vs Hybrid Fold Change")
-      
-      x_ <- ggplot_build(p2)$layout$panel_params[[1]]$x.range
-      p2 <- p2 + ggplot2::plot( color = "skyblue") +
+     
     
       custom_breaks <- c(-1.0, -0.5, 0.0, 0.5, 1.0)
       custom_labels <- c(0.05, 0.0, 0.5, 1.0, 0.5)
