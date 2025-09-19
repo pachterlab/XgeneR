@@ -221,7 +221,7 @@ getAssignmentsAndPlot <- function(fitObject, combo = NULL, plot = TRUE,
      
     
       custom_breaks <- c(-1.0, -0.5, 0.0, 0.5, 1.0)
-      custom_labels <- c(0.05, 0.0, 0.5, 1.0, 0.5)
+      custom_labels <- c(0.5, 0.0, 0.5, 1.0, 0.5)
       
       p3 <- ggplot2::ggplot(df, ggplot2::aes(x = cis_prop_reordered, y = P)) +
         ggplot2::geom_point(size = 0.8, alpha = 0.7, color = df$colors) +
