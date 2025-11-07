@@ -23,6 +23,7 @@ setClass(
   slots = list(
     counts = "matrix",
     metadata = "data.frame",
+    covariate_cols = "characterOrNULL",  # vector of covariates that MUST be columns in metadata
     fields_to_test = "characterOrNULL",        # vector of fields to test that MUST be columns in metadata
     ref = "listOrNULL",                  # named list of reference levels for each field in field_to_test
     higher_order_interactions = "listOrNULL",  # extra higher order interactions to test
@@ -76,14 +77,16 @@ convertMetadata <- function(metadata, ref) {
   )
   
   for (cond in conditions) {
-    ref_cond <- ref[[cond]]
-    categories <- setdiff(unique(metadata[[cond]]), ref_cond)
-    
-    for (cat in categories) {
-      entries <- ifelse(metadata[[cond]] == cat, 1, 0)
-      metadata_reformatted[[cat]] <- entries
+      categories <- unique(metadata[[cond]])
+
+      # Drop the first category to make design matrix identifiable
+      categories_to_encode <- categories[-1]
+
+      for (cat in categories_to_encode) {
+        entries <- ifelse(metadata[[cond]] == cat, 1, 0)
+        metadata_reformatted[[cat]] <- entries
+      }
     }
-  }
   
   rownames(metadata_reformatted) <- metadata_reformatted$Samples
   metadata_reformatted$Samples <- NULL
@@ -92,6 +95,7 @@ convertMetadata <- function(metadata, ref) {
 }
 
 getDesignVector <- function(metadata,
+                            covariate_cols,
                             fields_to_test,
                             ref = NULL,
                             higher_order_interactions = NULL,
@@ -131,7 +135,7 @@ getDesignVector <- function(metadata,
   return(list(design = design, ref = ref_categories))
 }
 
-getContrastVectors <- function(metadata, fields_to_test, weight_names, interaction_designator = "*") {
+getContrastVectors <- function(metadata, covariate_cols, fields_to_test, weight_names, interaction_designator = "*") {
   contrast_vector_list <- list()
   
   if (!is.null(fields_to_test)) {
@@ -186,18 +190,30 @@ getContrastVectors <- function(metadata, fields_to_test, weight_names, interacti
         contrast_vector_list[[paste0(combo, " null: no cis")]] <- cis_contrast
         contrast_vector_list[[paste0(combo, " null: no trans")]] <- trans_contrast
       }
-  } else {
-      
-      contrast_vector_list[[paste0("null: no cis")]] <- c(0,1,0,0)
-      contrast_vector_list[[paste0("null: no trans")]] <- c(0,0,-1,1)
-  
-  }
-  
-  return(contrast_vector_list)
-}
+  } else  {
+        n_covariate_weights <- 0
+
+        if (!is.null(covariate_cols)) {
+          for (col in covariate_cols) {
+            values <- metadata[[col]]
+            n_covariate_weights <- n_covariate_weights + (length(unique(values)) - 1)
+          }
+        }
+
+        n_extra <- n_covariate_weights
+        extra_zeros <- rep(0, n_extra)
+
+        # core contrasts + zeros for covariates
+        contrast_vector_list[[paste0("null: no cis")]]   <- c(0, 1, 0, 0, extra_zeros)
+        contrast_vector_list[[paste0("null: no trans")]] <- c(0, 0, -1, 1, extra_zeros)
+      }
+
+      return(contrast_vector_list)
+    }
 
 
-.buildDesignMatrix <- function(metadata_reformatted, 
+.buildDesignMatrix <- function(metadata_reformatted,
+                               covariate_cols,
                                fields_to_test,
                                design,
                                reg_designator = "Reg",
@@ -224,6 +240,13 @@ getContrastVectors <- function(metadata, fields_to_test, weight_names, interacti
 
   design_full <- cbind(design_full, beta_cis, beta_trans1, beta_trans2)
   weight_names <- c(weight_names, "beta_cis", "beta_trans1", "beta_trans2")
+    
+    
+  if (is.null(fields_to_test) && !is.null(covariate_cols)) {
+          covariate_matrix <- metadata_reformatted[, setdiff(colnames(metadata_reformatted), "Allele"), drop=FALSE]
+          design_full <- cbind(design_full, covariate_matrix)
+          weight_names <- c(weight_names, colnames(covariate_matrix))
+        }
 
   if (!is.null(fields_to_test)) { 
           for (des in design[-1]) {
@@ -267,22 +290,31 @@ getContrastVectors <- function(metadata, fields_to_test, weight_names, interacti
 }
 
 # object methods                          
-setMethod("initialize", "fitObject", function(.Object, counts, metadata, fields_to_test = NULL,
+setMethod("initialize", "fitObject", function(.Object, counts, metadata, covariate_cols = NULL, fields_to_test = NULL,
                                               ref = NULL, higher_order_interactions = NULL) {
   .Object@counts <- counts
-  .Object@metadata <- metadata
+  .Object@covariate_cols <- covariate_cols 
   .Object@fields_to_test <- fields_to_test  
   .Object@ref <- ref
   .Object@higher_order_interactions <- higher_order_interactions
   
+  cols_to_include <- c("Allele")
+  if (!is.null(fields_to_test)) cols_to_include <- c(cols_to_include, fields_to_test)
+  if (!is.null(covariate_cols)) cols_to_include <- c(cols_to_include, covariate_cols)
+  
+  # Subset raw metadata before converting
+  metadata <- metadata[, intersect(cols_to_include, colnames(metadata)), drop = FALSE]
+    
+  .Object@metadata <- metadata
+
   # Compute reformatted metadata and design matrix
   metadata_ref <- convertMetadata(metadata, ref)
-  result_designVector <- getDesignVector(metadata, fields_to_test, ref, higher_order_interactions)
+  result_designVector <- getDesignVector(metadata, covariate_cols, fields_to_test, ref, higher_order_interactions)
   design <- result_designVector[["design"]]
   ref <- result_designVector[["ref"]]
-  design_matrix <- .buildDesignMatrix(metadata_ref, fields_to_test, design)
+  design_matrix <- .buildDesignMatrix(metadata_ref, covariate_cols, fields_to_test, design)
   weight_names <- colnames(design_matrix)
-  contrast_vectors <- getContrastVectors(metadata, fields_to_test, weight_names)
+  contrast_vectors <- getContrastVectors(metadata, covariate_cols, fields_to_test, weight_names)
 
   .Object@contrast_vectors <- contrast_vectors
   .Object@design <- design
