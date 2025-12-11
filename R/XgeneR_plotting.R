@@ -129,12 +129,12 @@ getAssignmentsAndPlot <- function(fitObject, combo = NULL, plot = TRUE,
       combo_X[4, 2] <- 1
       # trans1
       combo_X[1, 3] <- 1
-      combo_X[3, 3] <- 1
-      combo_X[4, 3] <- 1
+      combo_X[3, 3] <- 0.5
+      combo_X[4, 3] <- 0.5
       # trans2
-      combo_X[2, 4] <- 1
-      combo_X[3, 4] <- 1
-      combo_X[4, 4] <- 1
+#       combo_X[2, 4] <- 1
+#       combo_X[3, 4] <- 1
+#       combo_X[4, 4] <- 1
   }
                         
   num_test <- nrow(fitObject@weights)

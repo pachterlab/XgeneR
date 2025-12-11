@@ -204,8 +204,8 @@ getContrastVectors <- function(metadata, covariate_cols, fields_to_test, weight_
         extra_zeros <- rep(0, n_extra)
 
         # core contrasts + zeros for covariates
-        contrast_vector_list[[paste0("null: no cis")]]   <- c(0, 1, 0, 0, extra_zeros)
-        contrast_vector_list[[paste0("null: no trans")]] <- c(0, 0, -1, 1, extra_zeros)
+        contrast_vector_list[[paste0("null: no cis")]]   <- c(0, 1, 0, extra_zeros)
+        contrast_vector_list[[paste0("null: no trans")]] <- c(0, 0, 1, extra_zeros)
       }
 
       return(contrast_vector_list)
@@ -235,11 +235,15 @@ getContrastVectors <- function(metadata, covariate_cols, fields_to_test, weight_
   H2 <- metadata_reformatted$Allele == "H2"
 
   beta_cis <- as.integer(P2 | H2)
-  beta_trans1 <- as.integer(P1 | H1 | H2)
-  beta_trans2 <- as.integer(P2 | H1 | H2)
+#   beta_trans1 <- as.integer(P1 | H1 | H2)
+#   beta_trans1 <- as.integer(P2 | H1 | H2)
+#   beta_trans1 <- ifelse(P1, 1,
+#                       ifelse(H1 | H2, 0.5, 0))
+  beta_trans <- ifelse(P1, 1,
+                      ifelse(H1 | H2, 0.5, 0))
 
-  design_full <- cbind(design_full, beta_cis, beta_trans1, beta_trans2)
-  weight_names <- c(weight_names, "beta_cis", "beta_trans1", "beta_trans2")
+  design_full <- cbind(design_full, beta_cis, beta_trans)
+  weight_names <- c(weight_names, "beta_cis", "beta_trans")
     
     
   if (is.null(fields_to_test) && !is.null(covariate_cols)) {
