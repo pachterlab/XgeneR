@@ -23,6 +23,7 @@ setClass(
   slots = list(
     counts = "matrix",
     metadata = "data.frame",
+    trans_model = "characterOrNULL",     # character that tells which trans model should be used
     covariate_cols = "characterOrNULL",  # vector of covariates that MUST be columns in metadata
     fields_to_test = "characterOrNULL",        # vector of fields to test that MUST be columns in metadata
     ref = "listOrNULL",                  # named list of reference levels for each field in field_to_test
@@ -216,6 +217,7 @@ getContrastVectors <- function(metadata, covariate_cols, fields_to_test, weight_
                                covariate_cols,
                                fields_to_test,
                                design,
+                               trans_model,
                                reg_designator = "Reg",
                                interact_designator = "*") {
   stopifnot(design[1] == reg_designator)
@@ -239,8 +241,14 @@ getContrastVectors <- function(metadata, covariate_cols, fields_to_test, weight_
 #   beta_trans1 <- as.integer(P2 | H1 | H2)
 #   beta_trans1 <- ifelse(P1, 1,
 #                       ifelse(H1 | H2, 0.5, 0))
-  beta_trans <- ifelse(P1, 1,
+  if (trans_model == "log_additive") {
+      beta_trans <- ifelse(P1, 1,
                       ifelse(H1 | H2, 0.5, 0))
+      }
+  if (trans_model == "dominant") {
+      beta_trans <- as.integer(P1 | H1 | H2)
+      }
+  
 
   design_full <- cbind(design_full, beta_cis, beta_trans)
   weight_names <- c(weight_names, "beta_cis", "beta_trans")
@@ -294,13 +302,15 @@ getContrastVectors <- function(metadata, covariate_cols, fields_to_test, weight_
 }
 
 # object methods                          
-setMethod("initialize", "fitObject", function(.Object, counts, metadata, covariate_cols = NULL, fields_to_test = NULL,
+setMethod("initialize", "fitObject", function(.Object, counts, metadata, trans_model = "log_additive",
+                                              covariate_cols = NULL, fields_to_test = NULL,
                                               ref = NULL, higher_order_interactions = NULL) {
   .Object@counts <- counts
   .Object@covariate_cols <- covariate_cols 
   .Object@fields_to_test <- fields_to_test  
   .Object@ref <- ref
   .Object@higher_order_interactions <- higher_order_interactions
+  .Object@trans_model <- trans_model
   
   cols_to_include <- c("Allele")
   if (!is.null(fields_to_test)) cols_to_include <- c(cols_to_include, fields_to_test)
@@ -316,7 +326,7 @@ setMethod("initialize", "fitObject", function(.Object, counts, metadata, covaria
   result_designVector <- getDesignVector(metadata, covariate_cols, fields_to_test, ref, higher_order_interactions)
   design <- result_designVector[["design"]]
   ref <- result_designVector[["ref"]]
-  design_matrix <- .buildDesignMatrix(metadata_ref, covariate_cols, fields_to_test, design)
+  design_matrix <- .buildDesignMatrix(metadata_ref, covariate_cols, fields_to_test, design, trans_model)
   weight_names <- colnames(design_matrix)
   contrast_vectors <- getContrastVectors(metadata, covariate_cols, fields_to_test, weight_names)
 
