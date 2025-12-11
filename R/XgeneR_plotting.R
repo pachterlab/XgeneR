@@ -128,12 +128,12 @@ getAssignmentsAndPlot <- function(fitObject, combo = NULL, plot = TRUE,
       combo_X[2, 2] <- 1
       combo_X[4, 2] <- 1
       # trans
-      if fitObject@trans_model == "log_additive" {
+      if (fitObject@trans_model == "log_additive") {
               combo_X[1, 3] <- 1
               combo_X[3, 3] <- 0.5
               combo_X[4, 3] <- 0.5
           }
-      if fitObject@trans_model == "dominant" {
+      if (fitObject@trans_model == "dominant") {
               combo_X[1, 3] <- 1
               combo_X[3, 3] <- 1
               combo_X[4, 3] <- 1
