@@ -29,17 +29,18 @@ Now, create an XgeneR fitObject, which requires at a minimum counts and metadata
 
 ```{r}
 # create fitObject
-fit_obj <- new("fitObject",counts = counts, metadata = metadata, fields_to_test = NULL)
+fit_obj <- new("fitObject",counts = counts, metadata = metadata,fields_to_test = NULL)
 ```
 
-Run edgeR to produce raw p-values and Benjamini-Hochberg false discovery rates (corrected by the number of genes per test) for the null hypotheses of "null: no cis" regulation and no trans regulation ("null: no trans"). 
+Run edgeR to produce raw p-values and Benjamini-Hochberg false discovery rates (corrected by the number of genes per test) for the null hypotheses of no cis regulation, stored as "beta_cis", and the null of no trans regulation ("beta_trans"). You could also run with covariates in covariate_col (they must be columns in metadata and in vector string format). 
+
 ```{r}
 # run edgeR tests
 fit_obj <- fit_edgeR(fit_obj)
-head(fit_obj@raw_pvals[["null: no cis"]])
-head(fit_obj@raw_pvals[["null: no trans"]])
-head(fit_obj@BH_FDRs[["null: no cis"]])
-head(fit_obj@BH_FDRs[["null: no trans"]])
+head(fit_obj@raw_pvals[["beta_cis"]])
+head(fit_obj@raw_pvals[["beta_trans"]])
+head(fit_obj@BH_FDRs[["beta_cis"]])
+head(fit_obj@BH_FDRs[["beta_trans"]])
 ```
 
 Create diagnostic plots. 

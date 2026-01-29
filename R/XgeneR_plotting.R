@@ -12,10 +12,10 @@
 plotPvalHistograms <- function(fitObject, combo = NULL) {
   # Construct keys for named list lookup
   if (!is.null(combo)) {
-      cis_label <- paste0(combo, " null: no cis")
-      trans_label <- paste0(combo, " null: no trans")} else {
-      cis_label <- "null: no cis"
-      trans_label <- "null: no trans"
+      cis_label <- paste0(combo, "beta_cis = 0")
+      trans_label <- paste0(combo, "beta_trans")} else {
+      cis_label <- "beta_cis"
+      trans_label <- "beta_trans"
   }
   
   
@@ -115,8 +115,8 @@ getAssignmentsAndPlot <- function(fitObject, combo = NULL, plot = TRUE,
       }
                         
   } else {
-      fdrs_no_cis <- fitObject@BH_FDRs[["null: no cis"]]
-      fdrs_no_trans <- fitObject@BH_FDRs[["null: no trans"]]
+      fdrs_no_cis <- fitObject@BH_FDRs[["beta_cis"]]
+      fdrs_no_trans <- fitObject@BH_FDRs[["beta_trans"]]
       
       combo_X <- matrix(0, nrow = 4, ncol = length(weight_names))
       # intercept
@@ -194,6 +194,7 @@ getAssignmentsAndPlot <- function(fitObject, combo = NULL, plot = TRUE,
   
   df$R <- R
   df$theta_scaled <- theta_scaled
+  df$cis_prop <- abs(theta_scaled)                          
   df$cis_prop_reordered <- cis_prop_reordered
   
   if (plot) {

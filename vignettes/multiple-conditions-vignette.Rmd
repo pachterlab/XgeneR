@@ -23,6 +23,7 @@ metadata_path <- system.file("extdata", "ballinger_metadata.csv", package = "Xge
 counts <- read.csv(count_path, row.names = 1)
 counts <- as.matrix(counts)
 metadata <- read.csv(metadata_path, row.names = 1) 
+rownames(metadata) <- metadata$Sample
 ```
 
 Now, create an XgeneR fitObject, which requires at a minimum counts and metadata. If testing in multiple conditions, the character vector `fields_to_test` must include fields that match metadata column names.. 

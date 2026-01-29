@@ -178,20 +178,20 @@ counts &lt;- as.matrix(counts)
 metadata &lt;- read.csv(metadata_path, row.names = 1) </code></pre>
 <p>Now, create an XgeneR fitObject, which requires at a minimum counts and metadata. If testing in only a single condition, the <code>fields_to_test</code> argument is <code>NULL</code> (default).</p>
 <pre class="r"><code># create fitObject
-fit_obj &lt;- new(&quot;fitObject&quot;,counts = counts, metadata = metadata, fields_to_test = NULL)</code></pre>
-<p>Run edgeR to produce raw p-values and Benjamini-Hochberg false discovery rates (corrected by the number of genes per test) for the null hypotheses of “null: no cis” regulation and no trans regulation (“null: no trans”).</p>
+fit_obj &lt;- new(&quot;fitObject&quot;,counts = counts, metadata = metadata,fields_to_test = NULL)</code></pre>
+<p>Run edgeR to produce raw p-values and Benjamini-Hochberg false discovery rates (corrected by the number of genes per test) for the null hypotheses of no cis regulation, stored as “beta_cis”, and the null of no trans regulation (“beta_trans”). You could also run with covariates in covariate_col (they must be columns in metadata and in vector string format).</p>
 <pre class="r"><code># run edgeR tests
 fit_obj &lt;- fit_edgeR(fit_obj)</code></pre>
 <pre><code>## Using classic mode.</code></pre>
 <pre><code>## [1] 2</code></pre>
-<pre class="r"><code>head(fit_obj@raw_pvals[[&quot;null: no cis&quot;]])</code></pre>
-<pre><code>## [1] 0.4140923 0.7100664 0.8274924 0.9246898 0.6863330 0.4743206</code></pre>
-<pre class="r"><code>head(fit_obj@raw_pvals[[&quot;null: no trans&quot;]])</code></pre>
-<pre><code>## [1] 0.49437880 0.88236335 0.09631475 0.92984395 0.92192280 0.65086037</code></pre>
-<pre class="r"><code>head(fit_obj@BH_FDRs[[&quot;null: no cis&quot;]])</code></pre>
-<pre><code>## [1] 0.1717408 0.4901480 0.6741915 0.8506526 0.4570955 0.2215085</code></pre>
-<pre class="r"><code>head(fit_obj@BH_FDRs[[&quot;null: no trans&quot;]])</code></pre>
-<pre><code>## [1] 0.16860222 0.71697565 0.00485607 0.82455508 0.80548565 0.33229856</code></pre>
+<pre class="r"><code>head(fit_obj@raw_pvals[[&quot;beta_cis&quot;]])</code></pre>
+<pre><code>## NULL</code></pre>
+<pre class="r"><code>head(fit_obj@raw_pvals[[&quot;beta_trans&quot;]])</code></pre>
+<pre><code>## NULL</code></pre>
+<pre class="r"><code>head(fit_obj@BH_FDRs[[&quot;beta_cis&quot;]])</code></pre>
+<pre><code>## NULL</code></pre>
+<pre class="r"><code>head(fit_obj@BH_FDRs[[&quot;beta_trans&quot;]])</code></pre>
+<pre><code>## NULL</code></pre>
 <p>Create diagnostic plots.</p>
 <p>The following creates a histogram of raw p-values and Benjamini Hochberg corrected FDRs.</p>
 <pre class="r"><code>fig_dir &lt;- &quot;./figures&quot;
@@ -200,24 +200,16 @@ if (!dir.exists(fig_dir)) {
 }
 png(&quot;./figures/pvalue_histogram_one-condition.png&quot;, width=400, height = 400)
 pval_plot &lt;- plotPvalHistograms(fit_obj)
-ggplot2::ggsave(&quot;./figures/pvalue_histogram_one-condition.png&quot;,plot=pval_plot,width=4,height=4)
-pval_plot</code></pre>
+ggplot2::ggsave(&quot;./figures/pvalue_histogram_one-condition.png&quot;,plot=pval_plot,width=4,height=4)</code></pre>
 <p>The following function <code>getAssignmentsandPlot</code> returns a data frame with regulatory assignments based on an FDR threshold of <code>alpha</code> as well as a plot that produces a visualization of the log2 of parental ratios and hybrid ratios colored by assignment in untransformed and transformed coordinate systems and the proportion cis. <code>results$df</code> is a dataframe regulatory assignments for the given <code>combo</code>, while <code>results$plot</code> is the plot.</p>
 <pre class="r"><code>png(&quot;./figures/tri_plot_one-condition.png&quot;, width=400, height = 1000)
 results &lt;- getAssignmentsAndPlot(fit_obj,alpha=0.05)
-ggplot2::ggsave(&quot;./figures/tri_plot_one-condition.png&quot;,plot=results$plot,width=4,height=10)
-results$plot</code></pre>
-<pre><code>## TableGrob (2 x 1) &quot;arrange&quot;: 2 grobs
-##   z     cells    name                 grob
-## 1 1 (1-1,1-1) arrange text[GRID.text.2899]
-## 2 2 (2-2,1-1) arrange      gtable[arrange]</code></pre>
-<pre> ```{r tri-plot, fig.width=4, fig.height=10} results &lt;- getAssignmentsAndPlot(fit_obj, combo=&quot;Liver*Warm&quot;, alpha=0.05) ggplot2::ggsave(&quot;./figures/tri_plot_multiple-conditions.png&quot;, plot = results$plot, width = 4, height = 10) results$plot ``` </pre>
+ggplot2::ggsave(&quot;./figures/tri_plot_one-condition.png&quot;,plot=results$plot,width=4,height=10)</code></pre>
 <p>Finally, plot histogram of genes assigned to each category.</p>
 <pre class="r"><code>png(&quot;./figures/tri_plot.png&quot;, width=400, height = 400)
 p &lt;- plotRegulatoryHistogram (results$df,title=&quot;Regulatory assignments quantified&quot;)</code></pre>
 <pre><code>## [1] &quot;conserved&quot; &quot;trans&quot;     &quot;cisxtrans&quot; &quot;cis&quot;       &quot;cis+trans&quot;</code></pre>
-<pre class="r"><code>ggplot2::ggsave(&quot;./figures/reg_histogram_one-condition.png&quot;,plot=p,width=4,height=4)
-p</code></pre>
+<pre class="r"><code>ggplot2::ggsave(&quot;./figures/reg_histogram_one-condition.png&quot;,plot=p,width=4,height=4)</code></pre>
 
 
 
