@@ -12,6 +12,7 @@ setClassUnion("characterOrNULL", c("character", "NULL"))
 #' @slot design The design vector for model building.
 #' @slot metadata_reformatted Metadata reformatted into binary indicator variables.
 #' @slot design_matrix_full Full numeric design matrix for model fitting.
+#' @slot contrast_vectors List of contrast vectors for hypothesis testing.
 #' @slot raw_pvals Raw p-values from hypothesis tests.
 #' @slot BH_FDRs FDR-adjusted p-values using Benjamini-Hochberg.
 #' @slot weights Coefficients (weights) estimated from the model.
@@ -30,6 +31,7 @@ setClass(
     design = "ANY",                      # defined upont initialization given fields_to_test and higher_order_interactions
     metadata_reformatted = "ANY",        # defined upon initialization
     design_matrix_full = "ANY",          # defined upon initialization given design
+    contrast_vectors = "listOrNULL",     # defined upon initialization given design and fields to test
     raw_pvals = "ANY",                   # defined post fit
     BH_FDRs = "ANY",                     # defined post fit
     weights = "ANY"                     # defined post fit
@@ -42,6 +44,7 @@ setClass(
     weights = NULL,
     metadata_reformatted = NULL,
     design_matrix_full = NULL,
+    contrast_vectors = NULL,
     BH_FDRs = NULL
   ),
   validity = function(object) {
@@ -62,10 +65,6 @@ setClass(
 )
 
 # Helper functions
-makeFieldLevelLabel <- function(field, level) {
-  paste0(tolower(field), "-", level)
-}
-
 convertMetadata <- function(metadata, ref) {
   stopifnot("Allele" %in% colnames(metadata))
 
@@ -80,18 +79,13 @@ convertMetadata <- function(metadata, ref) {
   
   for (cond in conditions) {
       categories <- unique(metadata[[cond]])
-      if (!is.null(ref) && cond %in% names(ref)) {
-        ref_category <- ref[[cond]]
-      } else {
-        ref_category <- categories[1]
-      }
 
       # Drop the first category to make design matrix identifiable
-      categories_to_encode <- setdiff(categories, ref_category)
+      categories_to_encode <- categories[-1]
 
       for (cat in categories_to_encode) {
         entries <- ifelse(metadata[[cond]] == cat, 1, 0)
-        metadata_reformatted[[makeFieldLevelLabel(cond, cat)]] <- entries
+        metadata_reformatted[[cat]] <- entries
       }
     }
   
@@ -128,9 +122,8 @@ getDesignVector <- function(metadata,
         ref_categories[[f]] <- category_to_remove
 
         for (c in categories) {
-          level_label <- makeFieldLevelLabel(f, c)
-          design <- append(design, list(paste0("Reg", interaction_designator, level_label)))
-          design <- append(design, list(level_label))
+          design <- append(design, list(paste0("Reg", interaction_designator, c)))
+          design <- append(design, list(c))
         }
       }
   } else {ref_categories<-NULL}
@@ -142,6 +135,83 @@ getDesignVector <- function(metadata,
   
   return(list(design = design, ref = ref_categories))
 }
+
+getContrastVectors <- function(metadata, covariate_cols, fields_to_test, weight_names, interaction_designator = "*") {
+  contrast_vector_list <- list()
+  
+  if (!is.null(fields_to_test)) {
+      # Get unique categories for each field
+      unique_categories <- lapply(fields_to_test, function(f) unique(metadata[[f]]))
+      names(unique_categories) <- fields_to_test
+
+      # Build all combinations
+      combos <- expand.grid(unique_categories, stringsAsFactors = FALSE)
+      combo_labels <- apply(combos, 1, function(row) paste(row, collapse = interaction_designator))
+
+      # Collect all levels
+      all_fields <- unlist(unique_categories, use.names = FALSE)
+
+      # Error checking
+      forbidden <- c("beta_cis", "beta_trans1", "beta_trans2")
+      if (any(all_fields %in% forbidden)) {
+        stop("Field name in beta_cis, beta_trans1, or beta_trans2. Please change.")
+      }
+
+      n_weights <- length(weight_names)
+
+      # Build contrast vectors
+      for (i in seq_along(combo_labels)) {
+        combo <- combo_labels[i]
+        combo_split <- unlist(strsplit(combo, interaction_designator,fixed=TRUE))
+        bad_fields <- setdiff(all_fields, combo_split)
+
+        # cis contrast
+        cis_contrast <- numeric(n_weights)
+        for (j in seq_along(weight_names)) {
+          weight <- weight_names[j]
+          keep <- !any(sapply(bad_fields, function(f) grepl(f, weight)))
+          if (keep && grepl("cis", weight)) {
+            cis_contrast[j] <- 1
+          }
+        }
+
+        # trans contrast
+        trans_contrast <- numeric(n_weights)
+        for (j in seq_along(weight_names)) {
+          weight <- weight_names[j]
+          keep <- !any(sapply(bad_fields, function(f) grepl(f, weight)))
+          if (keep && grepl("trans1", weight)) {
+            trans_contrast[j] <- 1
+          }
+          if (keep && grepl("trans2", weight)) {
+            trans_contrast[j] <- -1
+          }
+        }
+
+        contrast_vector_list[[paste0(combo, " null: no cis")]] <- cis_contrast
+        contrast_vector_list[[paste0(combo, " null: no trans")]] <- trans_contrast
+      }
+  } else  {
+        n_covariate_weights <- 0
+
+        if (!is.null(covariate_cols)) {
+          for (col in covariate_cols) {
+            values <- metadata[[col]]
+            n_covariate_weights <- n_covariate_weights + (length(unique(values)) - 1)
+          }
+        }
+
+        n_extra <- n_covariate_weights
+        extra_zeros <- rep(0, n_extra)
+
+        # core contrasts + zeros for covariates
+        contrast_vector_list[[paste0("null: no cis")]]   <- c(0, 1, 0, extra_zeros)
+        contrast_vector_list[[paste0("null: no trans")]] <- c(0, 0, 1, extra_zeros)
+      }
+
+      return(contrast_vector_list)
+    }
+
 
 .buildDesignMatrix <- function(metadata_reformatted,
                                covariate_cols,
@@ -266,7 +336,10 @@ setMethod("initialize", "fitObject", function(.Object, counts, metadata, trans_m
   design <- result_designVector[["design"]]
   ref <- result_designVector[["ref"]]
   design_matrix <- .buildDesignMatrix(metadata_ref, covariate_cols, fields_to_test, design, trans_model)
+  weight_names <- colnames(design_matrix)
+  contrast_vectors <- getContrastVectors(metadata, covariate_cols, fields_to_test, weight_names)
 
+  .Object@contrast_vectors <- contrast_vectors
   .Object@design <- design
   .Object@metadata_reformatted <- metadata_ref
   .Object@design_matrix_full <- design_matrix
@@ -299,37 +372,19 @@ setGeneric("fit_edgeR", function(object, ...) standardGeneric("fit_edgeR"))
 #' Fits a negative binomial GLM using edgeR for a given `fitObject`, testing for cis and trans effects between homozygous parents and their heterozygous crosses.
 #'
 #' @param object A `fitObject` instance containing counts, metadata, and design.
-#' @param test Optional named list of custom tests to run after the default
-#'   tests. Each element can be either a numeric contrast vector (same length
-#'   as the number of model coefficients) or a numeric vector of coefficient
-#'   indices passed to `glmLRT(coef = ...)`.
 #' @param ... Additional arguments (currently unused).
 #'
 #' @return A `fitObject` with updated slots for raw p-values, adjusted FDRs, and model weights.
 #' @export
 #' @import edgeR  
-setMethod("fit_edgeR", "fitObject", function(object, test = NULL, ...) {
+setMethod("fit_edgeR", "fitObject", function(object, ...) {
 
   counts <- object@counts
   design_matrix <- object@design_matrix_full
   gene_names <- rownames(counts)
 
-  weight_names <- colnames(design_matrix)
-  cis_coef_idx <- which(grepl("cis", weight_names))
-  trans_coef_idx <- which(grepl("trans", weight_names))
-
-  if (length(cis_coef_idx) == 0) {
-    stop("No coefficient names contain 'cis'; cannot run default cis test.")
-  }
-  if (length(trans_coef_idx) == 0) {
-    stop("No coefficient names contain 'trans'; cannot run default trans test.")
-  }
-
-  if (!is.null(test)) {
-    if (!is.list(test) || is.null(names(test)) || any(names(test) == "")) {
-      stop("`test` must be a named list where names are null labels.")
-    }
-  }
+  coef_names <- colnames(design_matrix)
+  coef_names <- setdiff(coef_names, "Intercept")
 
   raw_pval_list <- list(Genes = gene_names)
   fdr_list      <- list(Genes = gene_names)
@@ -340,71 +395,16 @@ setMethod("fit_edgeR", "fitObject", function(object, test = NULL, ...) {
   y <- edgeR::estimateDisp(y)
   fit <- edgeR::glmFit(y, design_matrix)
 
-  ## Default joint tests
-  default_tests <- list(
-    "null: no cis" = cis_coef_idx,
-    "null: no trans" = trans_coef_idx
-  )
+  ## Test each coefficient
+  for (coef_name in coef_names) {
 
-  for (test_name in names(default_tests)) {
-    lrt <- edgeR::glmLRT(fit, coef = default_tests[[test_name]])
+    coef_idx <- which(colnames(design_matrix) == coef_name)
+
+    lrt <- edgeR::glmLRT(fit, coef = coef_idx)
     pvals <- lrt$table$PValue
-    raw_pval_list[[test_name]] <- pvals
-    fdr_list[[test_name]] <- get_fdrs(pvals)
-  }
 
-  ## Field-level joint tests (only for multi-condition models)
-  if (!is.null(object@fields_to_test)) {
-    for (field_name in object@fields_to_test) {
-      field_tag <- tolower(field_name)
-      cis_field_idx <- which(startsWith(weight_names, paste0("beta_cis*", field_tag, "-")))
-      trans_field_idx <- which(startsWith(weight_names, paste0("beta_trans*", field_tag, "-")))
-
-      if (length(cis_field_idx) > 0) {
-        cis_test_name <- paste0("null: no ", field_name, " cis")
-        lrt <- edgeR::glmLRT(fit, coef = cis_field_idx)
-        pvals <- lrt$table$PValue
-        raw_pval_list[[cis_test_name]] <- pvals
-        fdr_list[[cis_test_name]] <- get_fdrs(pvals)
-      }
-
-      if (length(trans_field_idx) > 0) {
-        trans_test_name <- paste0("null: no ", field_name, " trans")
-        lrt <- edgeR::glmLRT(fit, coef = trans_field_idx)
-        pvals <- lrt$table$PValue
-        raw_pval_list[[trans_test_name]] <- pvals
-        fdr_list[[trans_test_name]] <- get_fdrs(pvals)
-      }
-    }
-  }
-
-  ## Optional user-defined tests run after defaults
-  if (!is.null(test)) {
-    for (test_name in names(test)) {
-      test_vector <- test[[test_name]]
-
-      if (!is.numeric(test_vector)) {
-        stop(paste0("Custom test `", test_name, "` must be numeric."))
-      }
-
-      if (length(test_vector) == ncol(design_matrix)) {
-        lrt <- edgeR::glmLRT(fit, contrast = test_vector)
-      } else {
-        if (any(test_vector < 1) || any(test_vector > ncol(design_matrix))) {
-          stop(
-            paste0(
-              "Custom test `", test_name, "` has coefficient indices outside [1, ",
-              ncol(design_matrix), "]."
-            )
-          )
-        }
-        lrt <- edgeR::glmLRT(fit, coef = as.integer(test_vector))
-      }
-
-      pvals <- lrt$table$PValue
-      raw_pval_list[[test_name]] <- pvals
-      fdr_list[[test_name]] <- get_fdrs(pvals)
-    }
+    raw_pval_list[[coef_name]] <- pvals
+    fdr_list[[coef_name]] <- get_fdrs(pvals)
   }
 
   object@raw_pvals <- as.data.frame(
@@ -424,6 +424,45 @@ setMethod("fit_edgeR", "fitObject", function(object, test = NULL, ...) {
   object
 })           
            
+           
+           
+           
+# setMethod("fit_edgeR", "fitObject", function(object, ...) {
+#   counts <- object@counts
+#   design_matrix <- object@design_matrix_full
+#   contrast_vectors <- object@contrast_vectors
+
+#   gene_names <- rownames(counts)
+
+#   raw_pval_list <- list(Genes = gene_names)
+#   corrected_fdr_list <- list(Genes = gene_names)
+
+#   # Run edgeR pipeline
+#   y <- edgeR::DGEList(counts = counts)
+# #   y <- edgeR::calcNormFactors(y)
+#   y <- edgeR::normLibSizes(y)
+#   y <- edgeR::estimateDisp(y)
+#   fit <- edgeR::glmFit(y, design_matrix)
+
+#   # Test various hypotheses
+#   i = 0 
+#   for (contrast_name in names(contrast_vectors)) {
+#       i = i+1
+#       contrast_vector <- contrast_vectors[[contrast_name]]
+#       lrt <- edgeR::glmLRT(fit, contrast = contrast_vector)
+#       raw_pvals <- lrt$table$PValue
+#       raw_pval_list[[contrast_name]] <- raw_pvals
+# #       corrected_fdr_list[[contrast_name]] <- p.adjust(raw_pvals, method = "BH")  perhaps implement later
+#       corrected_fdr_list[[contrast_name]] <- get_fdrs(raw_pvals)
+#     }
+#   print(i)
+
+#   object@raw_pvals <- as.data.frame(raw_pval_list, row.names = gene_names, check.names = FALSE)
+#   object@BH_FDRs <- as.data.frame(corrected_fdr_list, row.names = gene_names, check.names = FALSE)
+#   object@weights <- coef(fit)  # ADD WEIGHT NAMES AND GENE NAMES 
+
+#   return(object)
+# })
 
 
     

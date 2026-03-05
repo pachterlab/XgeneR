@@ -1,0 +1,25 @@
+,Unnamed: 0,Sample,Allele,Individual,Generation
+0,0,MBSD_104.counts,P1,MBSD,Parent
+1,1,MBSD_106.counts,P1,MBSD,Parent
+2,2,MBSD_110.counts,P1,MBSD,Parent
+3,3,MBSD_114.counts,P1,MBSD,Parent
+4,4,MBSD_119.counts,P1,MBSD,Parent
+5,5,MBSD_123.counts,P1,MBSD,Parent
+6,6,MBSD_156.counts,P2,MBSD,Parent
+7,7,MBSD_158.counts,P2,MBSD,Parent
+8,8,MBSD_162.counts,P2,MBSD,Parent
+9,9,MBSD_166.counts,P2,MBSD,Parent
+10,10,MBSD_168.counts,P2,MBSD,Parent
+11,11,MBSD_173.counts,P2,MBSD,Parent
+12,12,X177_coldM_geno1,H1,X177,Hybrid
+13,13,X182_coldM_geno1,H1,X182,Hybrid
+14,14,X187_coldM_geno1,H1,X187,Hybrid
+15,15,X192_coldM_geno1,H1,X192,Hybrid
+16,16,X194_coldM_geno1,H1,X194,Hybrid
+17,17,X198_coldM_geno1,H1,X198,Hybrid
+18,18,X177_coldM_geno2,H2,X177,Hybrid
+19,19,X182_coldM_geno2,H2,X182,Hybrid
+20,20,X187_coldM_geno2,H2,X187,Hybrid
+21,21,X192_coldM_geno2,H2,X192,Hybrid
+22,22,X194_coldM_geno2,H2,X194,Hybrid
+23,23,X198_coldM_geno2,H2,X198,Hybrid

@@ -10,15 +10,16 @@
 #' @import ggplot2
 #' @import patchwork
 plotPvalHistograms <- function(fitObject, combo = NULL) {
-  # Construct keys for named list lookup
-  if (!is.null(combo)) {
-      cis_label <- paste0(combo, "beta_cis = 0")
-      trans_label <- paste0(combo, "beta_trans")} else {
-      cis_label <- "beta_cis"
-      trans_label <- "beta_trans"
+  if (!is.null(fitObject@fields_to_test)) {
+    stop("Plotting for multi-condition models has not been implemented yet.")
   }
-  
-  
+  if (!is.null(combo)) {
+    stop("`combo` is not supported for one-condition plotting.")
+  }
+
+  cis_label <- "null: no cis"
+  trans_label <- "null: no trans"
+
   # Extract values
   raw_cis <- fitObject@raw_pvals[[cis_label]]
   raw_trans <- fitObject@raw_pvals[[trans_label]]
@@ -70,76 +71,37 @@ plotPvalHistograms <- function(fitObject, combo = NULL) {
 getAssignmentsAndPlot <- function(fitObject, combo = NULL, plot = TRUE, 
                                   cell_size = 10000, alpha = 0.05,
                                   interaction_designator = "*") {
+  if (!is.null(fitObject@fields_to_test)) {
+    stop("Plotting for multi-condition models has not been implemented yet.")
+  }
+  if (!is.null(combo)) {
+    stop("`combo` is not supported for one-condition plotting.")
+  }
   
   weight_names <- colnames(fitObject@design_matrix_full)
-    
-  if (!is.null(combo)) {
-      fdrs_no_cis <- fitObject@BH_FDRs[[paste0(combo, " null: no cis")]]
-      fdrs_no_trans <- fitObject@BH_FDRs[[paste0(combo, " null: no trans")]]
-      # Construct unique categories
-      unique_categories <- lapply(fitObject@fields_to_test, function(f) {
-        unique(fitObject@metadata[[f]])
-      })
-      names(unique_categories) <- fitObject@fields_to_test
+  fdrs_no_cis <- fitObject@BH_FDRs[["null: no cis"]]
+  fdrs_no_trans <- fitObject@BH_FDRs[["null: no trans"]]
 
-      all_fields <- unlist(unique_categories)
-      combo_split <- strsplit(combo, interaction_designator)[[1]]
-      bad_fields <- all_fields[!all_fields %in% combo_split]
-
-      combo_X <- matrix(0, nrow = 4, ncol = length(weight_names))
-
-      for (i in seq_along(weight_names)) {
-        weight <- weight_names[i]
-        keep <- !any(sapply(bad_fields, function(b) grepl(b, weight)))
-        cis <- keep && grepl("cis", weight)
-        trans1 <- keep && grepl("trans1", weight)
-        trans2 <- keep && grepl("trans2", weight)
-
-        if (cis) {
-          combo_X[2, i] <- 1
-          combo_X[4, i] <- 1
-        }
-        if (trans1) {
-          combo_X[1, i] <- 1
-          combo_X[3, i] <- 1
-          combo_X[4, i] <- 1
-        }
-        if (trans2) {
-          combo_X[2, i] <- 1
-          combo_X[3, i] <- 1
-          combo_X[4, i] <- 1
-        }
-        if (keep && !cis && !trans1 && !trans2) {
-          combo_X[, i] <- 1
-        }
+  combo_X <- matrix(0, nrow = 4, ncol = length(weight_names))
+  # intercept
+  combo_X[1,1] <- 1
+  combo_X[2,1] <- 1
+  combo_X[3,1] <- 1
+  combo_X[4,1] <- 1
+  # cis
+  combo_X[2, 2] <- 1
+  combo_X[4, 2] <- 1
+  # trans
+  if (fitObject@trans_model == "log_additive") {
+          combo_X[1, 3] <- 1
+          combo_X[3, 3] <- 0.5
+          combo_X[4, 3] <- 0.5
       }
-                        
-  } else {
-      fdrs_no_cis <- fitObject@BH_FDRs[["beta_cis"]]
-      fdrs_no_trans <- fitObject@BH_FDRs[["beta_trans"]]
-      
-      combo_X <- matrix(0, nrow = 4, ncol = length(weight_names))
-      # intercept
-      combo_X[1,1] <- 1
-      combo_X[2,1] <- 1
-      combo_X[3,1] <- 1
-      combo_X[4,1] <- 1
-      # cis
-      combo_X[2, 2] <- 1
-      combo_X[4, 2] <- 1
-      # trans
-      if (fitObject@trans_model == "log_additive") {
-              combo_X[1, 3] <- 1
-              combo_X[3, 3] <- 0.5
-              combo_X[4, 3] <- 0.5
-          }
-      if (fitObject@trans_model == "dominant") {
-              combo_X[1, 3] <- 1
-              combo_X[3, 3] <- 1
-              combo_X[4, 3] <- 1
-          }
-
-  }
+  if (fitObject@trans_model == "dominant") {
+          combo_X[1, 3] <- 1
+          combo_X[3, 3] <- 1
+          combo_X[4, 3] <- 1
+      }
                         
   num_test <- nrow(fitObject@weights)
   pred_counts <- matrix(NA, nrow = num_test, ncol = 4)
@@ -240,10 +202,7 @@ getAssignmentsAndPlot <- function(fitObject, combo = NULL, plot = TRUE,
 #         ggplot2::theme(legend.position = "none")
 #         ggplot2::ggtitle("Polar Representation of Cis-Trans Balance")
       
-      if (!is.null(combo)) {
-          title <- grid::textGrob(combo,gp = grid::gpar(fontsize = 16))} else{
-          title <- grid::textGrob("",gp = grid::gpar(fontsize = 16))
-      }
+      title <- grid::textGrob("",gp = grid::gpar(fontsize = 16))
       
       plot_panel <- do.call(gridExtra::arrangeGrob, c(list(p1, p2, p3), nrow = 3))
 
