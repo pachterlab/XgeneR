@@ -5,6 +5,8 @@ This repository contains the code written by Maria Carilli to run analysis of _c
 - Source code is in the `R/` directory.  
 - Example vignettes for single-condition or multiple-condition regulation are available in the `vignettes/` directory.
 
+A Python port of `XgeneR` is available: see [`XgenePy`](https://github.com/pachterlab/XgenePy).
+
 ## Installation
 
 `XgeneR` can be installed in R with the following command:
